@@ -12,6 +12,8 @@ module.exports = class Jenser {
             errors: 0,
             successes: 0,
         };
+        this.hatImpfe = false;
+        this.letzteImpforte = [];
     }
 
     getSuccessData() {
@@ -24,6 +26,22 @@ module.exports = class Jenser {
                 this.successData[key] = data[key];
             }
         });
+    }
+
+    impfOrte() {
+        return this.letzteImpforte;
+    }
+
+    async neuerImpfStatus() {
+        this.letzteImpforte = await this.woImpfe();
+        const hatteImpfe = this.hatImpfe;
+        this.hatImpfe = this.letzteImpforte.length > 0;
+
+        return this.hatImpfe !== hatteImpfe;
+    }
+
+    impfStatus() {
+        return this.hatImpfe;
     }
 
     async woImpfe() {

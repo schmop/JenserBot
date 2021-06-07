@@ -3,6 +3,19 @@ const fetch = require("node-fetch");
 module.exports = class ArztpraxisGifhorn {
     constructor(logger) {
         this.logger = logger;
+        this.hatImpfe = false;
+    }
+
+    async neuerImpfStatus() {
+        const letzteImpforte = await this.gibtsImpfe();
+        const hatteImpfe = this.hatImpfe;
+        this.hatImpfe = letzteImpforte.length > 0;
+
+        return this.hatImpfe !== hatteImpfe;
+    }
+
+    impfStatus() {
+        return this.hatImpfe;
     }
 
     async gibtsImpfe() {
@@ -39,7 +52,7 @@ module.exports = class ArztpraxisGifhorn {
                 return [];
             }
 
-            return data.termine.length > 0;
+            return data.terminsuchen.filter(termin => !termin.name.startsWith('2. Impfung')).length > 0;
         } catch (e) {
             this.logger.error('Unknown error occured', e);
 

@@ -39,6 +39,18 @@ telegram.registerCommand('start', message => {
     telegram.sendMessage(message.chat.id, 'Du bist doch schon längst Jensberechtigt!');
 });
 
+telegram.registerAdminCommand('registeredusers', message => {
+    const userListMessage = Object.keys(whitelist).map(username => {
+        if (whitelist[username].admin === true) {
+            return username + " (admin)";
+        }
+
+        return username;
+    }).join("\n");
+
+    telegram.sendMessage(message.chat.id, userListMessage);
+});
+
 telegram.registerAdminCommand('whoami', message => {
     telegram.sendMessage(message.chat.id, 'Ein wahrhaftiger Banger!');
 });
@@ -59,16 +71,21 @@ telegram.startPolling();
 logger.log('Start polling Jenser!');
 
 async function fragJens() {
-    const impfOrte = await jensMeister.woImpfe();
-    if (impfOrte.length > 0) {
-        const impfZentrumsNamen = impfOrte.map(zentrum => `${zentrum.name}\n${zentrum.streetName} ${zentrum.streetNumber}`);
-        const message = `Es gibt Impfe in deiner Nähe: ${impfZentrumsNamen}\nSchnell anmelden: https://www.impfportal-niedersachsen.de/portal/#/appointment/public`;
-        logger.log('In Braunschweig einen Termin gefunden!');
-        Object.keys(whitelist).forEach(vipName => {
-            telegram.sendMessage(whitelist[vipName].chatId, message);
-        });
-    } else {
-        logger.log('In Braunschweig noch keinen Termin gefunden.');
+    if (await jensMeister.neuerImpfStatus()) {
+        if (jensMeister.impfStatus()) {
+            const impfOrte = jensMeister.impfOrte();
+            const impfZentrumsNamen = impfOrte.map(zentrum => `${zentrum.name}\n${zentrum.streetName} ${zentrum.streetNumber}`);
+            const message = `Es gibt Impfe in deiner Nähe: ${impfZentrumsNamen}\nSchnell anmelden: https://www.impfportal-niedersachsen.de/portal/#/appointment/public`;
+            logger.log('In Braunschweig einen Termin gefunden!');
+            Object.keys(whitelist).forEach(vipName => {
+                telegram.sendMessage(whitelist[vipName].chatId, message);
+            });
+        } else {
+            Object.keys(whitelist).forEach(vipName => {
+                telegram.sendMessage(whitelist[vipName].chatId, 'Der Impftermin in Braunschweig ist nicht mehr verfügbar.');
+            });
+            logger.log('Der Impftermin in Braunschweig ist nicht mehr verfügbar.');
+        }
     }
     // persist successData
     const successData = jensMeister.getSuccessData();
@@ -79,20 +96,24 @@ async function fragJens() {
 }
 
 async function fragGifhorn() {
-    if (await gifhorn.gibtsImpfe()) {
-        const homepage = 'https://www.hausarztpraxis-gifhorn.de/covid19-impfung/';
-        const message = `Es gibt Impfe in Gifhorn:\n${homepage}`;
-        logger.log('In Gifhorn etwas gefunden!')
-        Object.keys(whitelist).forEach(vipName => {
-            telegram.sendMessage(whitelist[vipName].chatId, message);
-        });
-    } else {
-        logger.log('In Gifhorn Noch keinen Termin gefunden.');
+    if (await gifhorn.neuerImpfStatus()) {
+        if (gifhorn.impfStatus()) {
+            const homepage = 'https://www.hausarztpraxis-gifhorn.de/covid19-impfung/';
+            const message = `Es gibt Impfe in Gifhorn:\n${homepage}`;
+            logger.log('In Gifhorn etwas gefunden!')
+            Object.keys(whitelist).forEach(vipName => {
+                telegram.sendMessage(whitelist[vipName].chatId, message);
+            });
+        } else {
+            Object.keys(whitelist).forEach(vipName => {
+                telegram.sendMessage(whitelist[vipName].chatId, "Der Impftermin in Gifhorn ist nicht mehr verfügbar.");
+            });
+        }
     }
 }
 
-setInterval(() => {
-    fragJens();
-    fragGifhorn();
+setInterval(async () => {
+    await fragJens();
+    await fragGifhorn();
 }, 60000);
 
