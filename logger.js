@@ -19,6 +19,10 @@ module.exports = class Logger {
         console.info(line);
     }
 
+    warn() {
+        this.warning(...arguments);
+    }
+
     warning() {
         const line = this._formatLogMessage(this.constructor.WARN_LEVEL(), ...arguments);
         this._addToLog(line);

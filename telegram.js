@@ -63,7 +63,6 @@ module.exports = class Telegram {
         this.slimbot.on('message', message => {
             if (message.text[0] === '/') {
                 const command = message.text.substr(1).toLowerCase().split(' ')[0];
-                this.logger.log(message, command, this.commands, this.adminCommands);
                 if (this.privilege.isUserAdmin(message.chat.username)) {
                     if (typeof this.adminCommands[command] === 'function') {
                         this.adminCommands[command](message);

@@ -22,6 +22,15 @@ module.exports = class Config {
         this.set('whitelist', whitelist);
     }
 
+
+    getSuccessData() {
+        return this.get('successData', {});
+    }
+
+    setSuccessData(successData) {
+        this.set('successData', successData);
+    }
+
     get(key, fallback = null) {
         if (this.data[key] == null) {
             return fallback;
