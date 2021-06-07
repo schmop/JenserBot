@@ -63,9 +63,12 @@ async function fragJens() {
     if (impfOrte.length > 0) {
         const impfZentrumsNamen = impfOrte.map(zentrum => `${zentrum.name}\n${zentrum.streetName} ${zentrum.streetNumber}`);
         const message = `Es gibt Impfe in deiner Nähe: ${impfZentrumsNamen}\nSchnell anmelden: https://www.impfportal-niedersachsen.de/portal/#/appointment/public`;
+        logger.log('In Braunschweig einen Termin gefunden!');
         Object.keys(whitelist).forEach(vipName => {
             telegram.sendMessage(whitelist[vipName].chatId, message);
         });
+    } else {
+        logger.log('In Braunschweig noch keinen Termin gefunden.');
     }
     // persist successData
     const successData = jensMeister.getSuccessData();
@@ -79,14 +82,17 @@ async function fragGifhorn() {
     if (await gifhorn.gibtsImpfe()) {
         const homepage = 'https://www.hausarztpraxis-gifhorn.de/covid19-impfung/';
         const message = `Es gibt Impfe in Gifhorn:\n${homepage}`;
+        logger.log('In Gifhorn etwas gefunden!')
         Object.keys(whitelist).forEach(vipName => {
             telegram.sendMessage(whitelist[vipName].chatId, message);
         });
+    } else {
+        logger.log('In Gifhorn Noch keinen Termin gefunden.');
     }
 }
 
 setInterval(() => {
     fragJens();
     fragGifhorn();
-}, 10000);
+}, 60000);
 
