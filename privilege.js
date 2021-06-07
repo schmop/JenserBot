@@ -4,14 +4,21 @@ module.exports = class Privilege {
     }
 
     isUserWhitelisted(username) {
-        const whitelist = this.config.get('whitelist', {});
-
-        return whitelist[username] != null;
+        return this.config.getWhitelist()[username] != null;
     }
 
     isUserAdmin(username) {
-        const whitelist = this.config.get('whitelist', {});
+        const whitelist = this.config.getWhitelist();
 
         return username in whitelist && whitelist[username]['admin'] === true;
     }
-}
+
+    getAllAdmins() {
+        const whitelist = this.config.getWhitelist();
+
+        return Object.keys(whitelist)
+            .filter(user => this.isUserAdmin(user))
+            .map(user => whitelist[user])
+        ;
+    }
+};

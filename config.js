@@ -2,7 +2,8 @@ const fs = require('fs');
 const Utils = require('./utils');
 
 module.exports = class Config {
-    constructor(configPath = '.config') {
+    constructor(logger, configPath = '.config') {
+        this.logger = logger;
         this.configPath = configPath;
         this.data = {};
         this._readConfig();
@@ -11,6 +12,14 @@ module.exports = class Config {
 
     persist() {
         this._persist();
+    }
+
+    getWhitelist() {
+        return this.get('whitelist', {});
+    }
+
+    setWhitelist(whitelist) {
+        this.set('whitelist', whitelist);
     }
 
     get(key, fallback = null) {
@@ -31,14 +40,14 @@ module.exports = class Config {
         try {
             fileContent = JSON.stringify(this.data, null, 4);
         } catch (e) {
-            console.error('Could not serialize config!', e);
+            this.logger.error('Could not serialize config!', e);
 
             return;
         }
         try {
             fs.writeFileSync(this.configPath, fileContent, 'utf8');
         } catch (err) {
-            console.error(`Could not write config file "${this.configPath}"!`, err);
+            this.logger.error(`Could not write config file "${this.configPath}"!`, err);
         }
     }
 
@@ -47,13 +56,13 @@ module.exports = class Config {
         try {
             fileContent = JSON.stringify(this.data, null, 4);
         } catch (e) {
-            console.error('Could not serialize config!', e);
+            this.logger.error('Could not serialize config!', e);
 
             return;
         }
         fs.writeFile(this.configPath, fileContent, 'utf8', err => {
             if (err != null) {
-                console.error(`Could not write config file "${this.configPath}"!`, err);
+                this.logger.error(`Could not write config file "${this.configPath}"!`, err);
             }
         });
     }
@@ -63,13 +72,13 @@ module.exports = class Config {
         try {
             data = fs.readFileSync(this.configPath, 'utf8');
         } catch (err) {
-            console.error(`Could not read config file "${this.configPath}"!`, err);
+            this.logger.error(`Could not read config file "${this.configPath}"!`, err);
         }
         if (typeof data === 'string') {
             try {
                 this.data = JSON.parse(data);
             } catch (e) {
-                console.error(`Could not parse config file "${this.configPath}"!`, e);
+                this.logger.error(`Could not parse config file "${this.configPath}"!`, e);
             }
         }
     }

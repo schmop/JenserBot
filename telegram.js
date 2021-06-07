@@ -1,13 +1,20 @@
 module.exports = class Telegram {
-    constructor(slimbot, privilege) {
+    constructor(slimbot, privilege, logger) {
         this.slimbot = slimbot;
         this.privilege = privilege;
+        this.logger = logger;
         this.commands = {};
         this.adminCommands = {};
     }
 
     sendMessage(chatId, message) {
         this.slimbot.sendMessage(chatId, message);
+    }
+
+    sendMessageToMaintainer(message) {
+        this.privilege.getAllAdmins().forEach(user => {
+            this.slimbot.sendMessage(user.chatId, message);
+        });
     }
 
     startPolling() {
@@ -17,7 +24,8 @@ module.exports = class Telegram {
 
     registerCommand(command, callback) {
         if (this._commandExists(command)) {
-            console.error(`Command ${command} was already defined!`);
+            this.logger.error(`Command ${command} was already defined!`);
+
             return;
         }
         this.commands[command] = callback;
@@ -25,7 +33,7 @@ module.exports = class Telegram {
 
     registerAdminCommand(command, callback) {
         if (this._commandExists(command)) {
-            console.error(`Command ${command} was already defined!`);
+            this.logger.error(`Command ${command} was already defined!`);
             return;
         }
         this.adminCommands[command] = callback;
@@ -55,7 +63,7 @@ module.exports = class Telegram {
         this.slimbot.on('message', message => {
             if (message.text[0] === '/') {
                 const command = message.text.substr(1).toLowerCase().split(' ')[0];
-                console.log(message, command, this.commands, this.adminCommands);
+                this.logger.log(message, command, this.commands, this.adminCommands);
                 if (this.privilege.isUserAdmin(message.chat.username)) {
                     if (typeof this.adminCommands[command] === 'function') {
                         this.adminCommands[command](message);

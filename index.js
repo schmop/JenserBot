@@ -3,8 +3,10 @@ const Jenser = require('./jenser');
 const Config = require('./config');
 const Privilege = require('./privilege');
 const Telegram = require('./telegram');
+const Logger = require('./logger');
 
-const config = new Config();
+const logger = new Logger();
+const config = new Config(logger);
 const apiKey = config.get('apiKey');
 if (apiKey == null) {
 	console.error('Need the API Key of a Telegram Bot to work!');
@@ -15,18 +17,19 @@ if (apiKey == null) {
 }
 const slimbot = new Slimbot(apiKey);
 const privilege = new Privilege(config);
-const telegram = new Telegram(slimbot, privilege);
-const jensMeister = new Jenser();
+const telegram = new Telegram(slimbot, privilege, logger);
+logger.setTelegram(telegram);
+const jensMeister = new Jenser(logger);
 
-let whitelist = config.get('whitelist', {});
+let whitelist = config.getWhitelist();
 
-console.log('Registering message listeners!');
+logger.log('Registering message listeners!');
 
 telegram.registerCommand('start', message => {
     if (whitelist[message.chat.username] == null) {
         telegram.sendMessage(message.chat.id, `Hallo ${message.chat.first_name}!\nNun bist du Jensberechtigt 💉\nDu wirst automatisch über einen freien Termin in einem Braunschweiger Impfzentrum informiert!`);
         whitelist[message.chat.username] = {chatId: message.chat.id};
-        config.set('whitelist', whitelist);
+        config.setWhitelist(whitelist);
 
         return;
     }
@@ -39,11 +42,12 @@ telegram.registerAdminCommand('whoami', message => {
 
 telegram.addHelpCommand();
 
-console.log('Start polling telegram messages!');
+logger.log('Start polling telegram messages!');
 
 telegram.startPolling();
 
-console.log('Start polling Jenser!');
+logger.log('Start polling Jenser!');
+logger.error("Irgendwas schief gegangen, halp");
 setInterval(() => {
     const impfOrte = jensMeister.woImpfe();
     if (impfOrte.length > 0) {
