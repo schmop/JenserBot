@@ -57,7 +57,7 @@ telegram.registerAdminCommand('whoami', message => {
 
 telegram.registerAdminCommand('status', message => {
     const data = jensMeister.getSuccessData();
-    data.successRate = Math.round(data.success / data.sum * 100) + "%";
+    data.successRate = Math.round(data.successes / data.sum * 100) + "%";
     const statusMessage = Object.keys(data).map(name => `${name}: ${data[name]}`).join("\n");
     telegram.sendMessageToMaintainer(`Status:\n${statusMessage}`);
 });
