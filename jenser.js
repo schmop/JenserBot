@@ -1,8 +1,8 @@
-const fetch = require("node-fetch");
 
 module.exports = class Jenser {
-    constructor(logger, plz = '38106', birthDate = '843948000000') {
+    constructor(logger, client, plz = '38106', birthDate = '843948000000') {
         this.logger = logger;
+        this.client = client;
         this.plz = plz;
         this.birthDate = birthDate;
         this.successData = {
@@ -46,10 +46,10 @@ module.exports = class Jenser {
 
     async woImpfe() {
         const url = `https://www.impfportal-niedersachsen.de/portal/rest/appointments/findVaccinationCenterListFree/${this.plz}?stiko=&count=1&birthdate=${this.birthDate}`;
-        const response = await fetch(url);
+        const response = await this.client.fetch(url);
         if (response.ok === false) {
             this.logger.error("API IS WEIRD, JO!", response);
-            const data = await response.json();
+            const data = await response.text();
             this.logger.error("Kaputte Daten: ", data);
             this._countError();
         }

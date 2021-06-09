@@ -3,4 +3,4 @@ node_modules
 .git
 package-lock.json
 .idea
-logs.txt
+*logs.txt

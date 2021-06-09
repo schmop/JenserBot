@@ -14,7 +14,7 @@ module.exports = class Logger {
     }
 
     info() {
-        const line = this._formatLogMessage(this.constructor.INFO_LEVEL(), ...arguments);
+        const line = this._formatLogMessage(this.constructor.INFO_LEVEL, ...arguments);
         this._addToLog(line);
         console.info(line);
     }
@@ -24,13 +24,13 @@ module.exports = class Logger {
     }
 
     warning() {
-        const line = this._formatLogMessage(this.constructor.WARN_LEVEL(), ...arguments);
+        const line = this._formatLogMessage(this.constructor.WARN_LEVEL, ...arguments);
         this._addToLog(line);
         console.warn(line);
     }
 
     error() {
-        const line = this._formatLogMessage(this.constructor.ERROR_LEVEL(), ...arguments);
+        const line = this._formatLogMessage(this.constructor.ERROR_LEVEL, ...arguments);
         this._addToLog(line);
         console.error(line);
         this._notifyMaintainer(line);
@@ -53,7 +53,7 @@ module.exports = class Logger {
 
             return JSON.stringify(argument);
         });
-        const loggingText = serializedArguments.join(', ');
+        const loggingText = serializedArguments.join(' ');
         const date = (new Date()).toLocaleString('de');
 
         return `[${warnLevel}][${date}] ${loggingText}`;
@@ -76,15 +76,15 @@ module.exports = class Logger {
         });
     }
 
-    static INFO_LEVEL() {
+    static get INFO_LEVEL() {
         return 'INFO';
     }
 
-    static WARN_LEVEL() {
+    static get WARN_LEVEL() {
         return 'WARN';
     }
 
-    static ERROR_LEVEL() {
+    static get ERROR_LEVEL() {
         return 'FAIL';
     }
 };

@@ -3,6 +3,7 @@ const Logger = require('./logger');
 const Config = require('./config');
 const Privilege = require('./privilege');
 const Telegram = require('./telegram');
+const ProxyClient = require('./proxy-client');
 const Jenser = require('./jenser');
 const Gifhorn = require('./arztpraxis-gifhorn');
 
@@ -20,7 +21,8 @@ const slimbot = new Slimbot(apiKey);
 const privilege = new Privilege(config);
 const telegram = new Telegram(slimbot, privilege, logger);
 logger.setTelegram(telegram);
-const jensMeister = new Jenser(logger);
+const client = new ProxyClient(logger);
+const jensMeister = new Jenser(logger, client);
 jensMeister.setSuccessData(config.getSuccessData());
 const gifhorn = new Gifhorn(logger);
 
@@ -49,6 +51,12 @@ telegram.registerAdminCommand('registeredusers', message => {
     }).join("\n");
 
     telegram.sendMessage(message.chat.id, userListMessage);
+});
+
+telegram.registerAdminCommand('proxystats', message => {
+    const proxystatsMessage = `Best agent: ${client.bestAgent}\nWorst agent: ${client.worstAgent}`;
+
+    telegram.sendMessage(message.chat.id, proxystatsMessage);
 });
 
 telegram.registerAdminCommand('whoami', message => {
@@ -112,8 +120,13 @@ async function fragGifhorn() {
     }
 }
 
-setInterval(async () => {
+async function impfIteration() {
     await fragJens();
     await fragGifhorn();
-}, 60000);
+    setTimeout(impfIteration, 1000);
+}
 
+(async () => {
+    await client.init();
+    await impfIteration();
+})();
