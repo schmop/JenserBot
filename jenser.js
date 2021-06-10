@@ -47,11 +47,16 @@ module.exports = class Jenser {
     async woImpfe() {
         const url = `https://www.impfportal-niedersachsen.de/portal/rest/appointments/findVaccinationCenterListFree/${this.plz}?stiko=&count=1&birthdate=${this.birthDate}`;
         const response = await this.client.fetch(url);
-        if (response.ok === false) {
-            this.logger.error("API IS WEIRD, JO!", response);
-            const data = await response.text();
-            this.logger.error("Kaputte Daten: ", data);
+        if (response.ok !== true) {
+            this.logger.warning("Fehlercode erhalten!", response.statusCode, response.statusText);
+            try {
+                const data = await response.text();
+                this.logger.warning("Kaputte Daten: ", data);
+            } catch (e) {
+                this.logger.warning("Leere Antwort erhalten!");
+            }
             this._countError();
+            return [];
         }
         try {
             const text = await response.text();
@@ -88,6 +93,7 @@ module.exports = class Jenser {
     }
 
     _countCaptcha() {
+        this.client.punishLastAgent();
         this.successData.sum++;
         this.successData.consecutiveCaptchas++;
         this.successData.numCaptchas++;
@@ -95,6 +101,7 @@ module.exports = class Jenser {
 
     _countError() {
         // intentionally no reset of the consecutive captchas
+        this.client.punishLastAgent();
         this.successData.sum++;
         this.successData.errors++;
     }

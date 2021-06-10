@@ -41,9 +41,20 @@ telegram.registerCommand('start', message => {
     telegram.sendMessage(message.chat.id, 'Du bist doch schon längst Jensberechtigt!');
 });
 
+telegram.registerCommand('stop', message => {
+    if (whitelist[message.chat.username] != null) {
+        telegram.sendMessage(message.chat.id, `Bis dann, ${message.chat.first_name}!\nDu bist nun von den Benachrichtigungen abgemeldet!`);
+        delete whitelist[message.chat.username];
+        config.setWhitelist(whitelist);
+
+        return;
+    }
+    telegram.sendMessage(message.chat.id, 'Du musst erstmal mit /start angemeldet sein, damit du dich abmelden kannst!');
+});
+
 telegram.registerAdminCommand('registeredusers', message => {
     const userListMessage = Object.keys(whitelist).map(username => {
-        if (whitelist[username].admin === true) {
+        if (privilege.isUserAdmin(username)) {
             return username + " (admin)";
         }
 
@@ -57,6 +68,12 @@ telegram.registerAdminCommand('proxystats', message => {
     const proxystatsMessage = `Best agent: ${client.bestAgent}\nWorst agent: ${client.worstAgent}`;
 
     telegram.sendMessage(message.chat.id, proxystatsMessage);
+});
+
+telegram.registerAdminCommand('allproxies', message => {
+    const proxies = client.weightSortedIps.join("\n");
+
+    telegram.sendMessage(message.chat.id, proxies);
 });
 
 telegram.registerAdminCommand('whoami', message => {

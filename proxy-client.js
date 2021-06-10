@@ -1,10 +1,12 @@
 const fetch = require("node-fetch");
-const HttpsProxyAgent = require('https-proxy-agent');
+const HttpsProxyAgent = require('./vendor/node-https-proxy-agent');
+const Url = require('url');
 
 module.exports = class ProxyClient {
     constructor(logger) {
         this.logger = logger;
         this.proxyIndex = 0;
+        this.lastProxyIndex = 0;
         this.proxyAgents = [];
     }
 
@@ -16,8 +18,25 @@ module.exports = class ProxyClient {
     }
 
     async init() {
-        let response = await fetch(this.constructor.PROXY_LIST_URL);
-        const rawList = await response.text();
+        /*let response = await fetch(this.constructor.PROXY_LIST_URL);
+        const rawList = await response.text();*/
+        const rawList = `130.61.227.199:80
+207.154.201.249:8080
+195.201.61.51:8000
+176.9.63.62:3128
+178.63.17.151:3128
+109.90.21.100:80
+217.79.181.109:443
+78.47.104.35:3128
+130.61.102.41:80
+130.61.155.13:80
+188.166.162.1:3128
+130.61.236.104:80
+130.61.22.238:80
+217.79.189.28:3128
+159.89.29.28:3128
+185.242.113.156:3128`;
+
         rawList
             .split("\n")
             .filter(line => /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{2,5}$/.test(line))
@@ -25,7 +44,7 @@ module.exports = class ProxyClient {
         ;
     }
 
-    async fetch(url, options = {}) {
+    async fetch(url, options = {timeout: 20000}) {
         let tries = 0;
         while (tries < this.constructor.RETRIES) {
             try {
@@ -38,19 +57,26 @@ module.exports = class ProxyClient {
             } catch (e) {
                 this.logger.warn("Punish agent for not obeying", this.currentIp);
                 this.punishCurrentAgent();
-                this.logger.warn("Best agent", this.bestAgent);
-                this.logger.warn("Worst agent", this.worstAgent);
                 this.smartSelectProxy();
                 tries++;
             }
         }
         this.logger.error("Proxies could not reach through!");
 
-        return {ok: false};
+        return {ok: false, statusCode: 0, statusText: `${tries} tries to connect failed!`};
     }
 
     punishCurrentAgent() {
-        this.proxyAgents[this.proxyIndex].weight = Math.max(1, Math.floor(this.proxyAgents[this.proxyIndex].weight / 2));
+        this.punishAgent(this.proxyIndex);
+    }
+
+
+    punishLastAgent() {
+        this.punishAgent(this.lastProxyIndex);
+    }
+
+    punishAgent(agentIndex) {
+        this.proxyAgents[agentIndex].weight = Math.max(1, Math.floor(this.proxyAgents[agentIndex].weight / 2));
     }
 
     rewardCurrentAgent() {
@@ -58,6 +84,7 @@ module.exports = class ProxyClient {
     }
 
     smartSelectProxy() {
+        this.lastProxyIndex = this.proxyIndex;
         const sumOfWeights = this.proxyAgents.map(agent => agent.weight).reduce((carry, val) => carry + val, 0);
         let randVal = Math.random() * sumOfWeights;
         for (let i = 0; i < this.numAgents; i++) {
@@ -87,6 +114,7 @@ module.exports = class ProxyClient {
     }
 
     selectNextProxy() {
+        this.lastProxyIndex = this.proxyIndex;
         this.proxyIndex = (this.proxyIndex + 1) % this.proxyAgents.length;
     }
 
@@ -109,7 +137,7 @@ module.exports = class ProxyClient {
     _addProxyAgent(ip) {
         this.proxyAgents.push({
             weight: 10,
-            agent: new HttpsProxyAgent(ip)
+            agent: new HttpsProxyAgent(Object.assign(Url.parse(ip), {timeout: 20000}))
         });
     }
 };

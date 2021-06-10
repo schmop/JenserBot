@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "https-proxy-agent": "^5.0.0",
     "node-fetch": "^3.0.0-beta.9",
     "slimbot": "^5.1.0"
   }

@@ -12,7 +12,7 @@ module.exports = class Telegram {
     }
 
     sendMessageToMaintainer(message) {
-        this.privilege.getAllAdmins().forEach(user => {
+        Object.values(this.privilege.getAllAdmins()).forEach(user => {
             this.slimbot.sendMessage(user.chatId, message);
         });
     }
