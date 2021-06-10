@@ -140,7 +140,7 @@ async function fragGifhorn() {
 async function impfIteration() {
     await fragJens();
     await fragGifhorn();
-    setTimeout(impfIteration, 1000);
+    setTimeout(impfIteration, 30000);
 }
 
 (async () => {
