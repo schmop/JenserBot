@@ -12,8 +12,6 @@ const config = new Config(logger);
 const apiKey = config.get('apiKey');
 if (apiKey == null) {
     console.error('Need the API Key of a Telegram Bot to work!');
-    config.set('apiKey', null);
-    config.persistSync();
     console.error('Put it in the .config file at the "apiKey" identifier!');
     process.exit(1);
 }
@@ -21,7 +19,7 @@ const slimbot = new Slimbot(apiKey);
 const privilege = new Privilege(config);
 const telegram = new Telegram(slimbot, privilege, logger);
 logger.setTelegram(telegram);
-const client = new ProxyClient(logger);
+const client = new ProxyClient(logger, config);
 const jensMeister = new Jenser(logger, client);
 jensMeister.setSuccessData(config.getSuccessData());
 const gifhorn = new Gifhorn(logger);
@@ -84,7 +82,7 @@ telegram.registerAdminCommand('status', message => {
     const data = jensMeister.getSuccessData();
     data.successRate = Math.round(data.successes / data.sum * 100) + "%";
     const statusMessage = Object.keys(data).map(name => `${name}: ${data[name]}`).join("\n");
-    telegram.sendMessageToMaintainer(`Status:\n${statusMessage}`);
+    telegram.sendMessage(message.chat.id, `Status:\n${statusMessage}`);
 });
 
 telegram.addHelpCommand();

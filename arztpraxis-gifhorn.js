@@ -35,8 +35,13 @@ module.exports = class ArztpraxisGifhorn {
         });
         if (response.ok === false) {
             this.logger.error("Responsecode nicht ok!", response);
-            const data = await response.json();
-            this.logger.error("Kaputte Daten: ", data);}
+            try {
+                const data = await response.text();
+                this.logger.error("Kaputte Daten: ", data);
+            } catch (e) {
+                this.logger.error("Leere Antwort erhalten!");
+            }
+        }
         try {
             const text = await response.text();
             let data = [];

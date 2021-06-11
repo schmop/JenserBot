@@ -3,8 +3,9 @@ const HttpsProxyAgent = require('./vendor/node-https-proxy-agent');
 const Url = require('url');
 
 module.exports = class ProxyClient {
-    constructor(logger) {
+    constructor(logger, config) {
         this.logger = logger;
+        this.config = config;
         this.proxyIndex = 0;
         this.lastProxyIndex = 0;
         this.proxyAgents = [];
@@ -17,9 +18,31 @@ module.exports = class ProxyClient {
         return "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt";
     }
 
+    async initFromConfig() {
+
+    }
+
     async init() {
+        const proxyList = this.config.getProxyList();
+        if (proxyList.length > 0) {
+            proxyList.forEach(proxy => {
+                if (typeof proxy !== 'string') {
+                    this._addProxyAgent(proxy.ip, proxy.weight);
+
+                    return;
+                }
+                if (proxy.startsWith('http://')) {
+                    this._addProxyAgent(proxy);
+                } else {
+                    this._addProxyAgent('http://' + proxy);
+                }
+            });
+
+            return;
+        }
         /*let response = await fetch(this.constructor.PROXY_LIST_URL);
         const rawList = await response.text();*/
+
         const rawList = `130.61.227.199:80
 207.154.201.249:8080
 195.201.61.51:8000
@@ -77,10 +100,12 @@ module.exports = class ProxyClient {
 
     punishAgent(agentIndex) {
         this.proxyAgents[agentIndex].weight = Math.max(1, Math.floor(this.proxyAgents[agentIndex].weight / 2));
+        this._saveAgents();
     }
 
     rewardCurrentAgent() {
         this.proxyAgents[this.proxyIndex].weight++;
+        this._saveAgents();
     }
 
     smartSelectProxy() {
@@ -134,10 +159,14 @@ module.exports = class ProxyClient {
         return 20;
     }
 
-    _addProxyAgent(ip) {
+    _addProxyAgent(ip, weight = 10) {
         this.proxyAgents.push({
-            weight: 10,
+            weight: weight,
             agent: new HttpsProxyAgent(Object.assign(Url.parse(ip), {timeout: 20000}))
         });
+    }
+
+    _saveAgents() {
+        this.config.setProxyList(this.proxyAgents.map(proxy => ({ip: proxy.agent.proxy.href, weight: proxy.weight})));
     }
 };

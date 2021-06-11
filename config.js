@@ -22,6 +22,13 @@ module.exports = class Config {
         this.set('whitelist', whitelist);
     }
 
+    getProxyList() {
+        return this.get('proxy', []);
+    }
+
+    setProxyList(proxyList) {
+        return this.set('proxy', proxyList);
+    }
 
     getSuccessData() {
         return this.get('successData', {});
