@@ -88,6 +88,7 @@ export default function parseProxyResponse(
 
 		function onreqerror(err: Error) {
 			console.error(err);
+			console.trace();
 			socket.destroy();
 			onerror(err);
 		}

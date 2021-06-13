@@ -67,6 +67,7 @@ function parseProxyResponse(socket, req) {
         req.on('error', onreqerror);
         function onreqerror(err) {
             console.error(err);
+            console.trace();
             socket.destroy();
             onerror(err);
         }
