@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const debug_1 = __importDefault(require("debug"));
 const debug = debug_1.default('https-proxy-agent:parse-proxy-response');
-function parseProxyResponse(socket) {
+function parseProxyResponse(socket, req) {
     return new Promise((resolve, reject) => {
         // we need to buffer any HTTP traffic that happens with the proxy before we get
         // the CONNECT response, so that if the response is anything other than an "200"
@@ -21,6 +21,7 @@ function parseProxyResponse(socket) {
                 socket.once('readable', read);
         }
         function cleanup() {
+            req.removeListener('error', onreqerror);
             socket.removeListener('end', onend);
             socket.removeListener('error', onerror);
             socket.removeListener('close', onclose);
@@ -28,9 +29,11 @@ function parseProxyResponse(socket) {
         }
         function onclose(err) {
             debug('onclose had error %o', err);
+            reject(err);
         }
         function onend() {
             debug('onend');
+            reject(null);
         }
         function onerror(err) {
             cleanup();
@@ -59,6 +62,13 @@ function parseProxyResponse(socket) {
         socket.on('error', onerror);
         socket.on('close', onclose);
         socket.on('end', onend);
+        // when request timeouted or occured other errors,
+        // we need to close the socket which is still connecting to the proxy
+        req.on('error', onreqerror);
+        function onreqerror(err) {
+            socket.destroy();
+            onerror(err);
+        }
         read();
     });
 }

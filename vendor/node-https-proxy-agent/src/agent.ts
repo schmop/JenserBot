@@ -133,7 +133,7 @@ export default class HttpsProxyAgent extends Agent {
 			payload += `${name}: ${headers[name]}\r\n`;
 		}
 
-		const proxyResponsePromise = parseProxyResponse(socket);
+		const proxyResponsePromise = parseProxyResponse(socket, req);
 
 		socket.write(`${payload}\r\n`);
 

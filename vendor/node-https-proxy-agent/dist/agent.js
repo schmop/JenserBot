@@ -98,7 +98,7 @@ class HttpsProxyAgent extends agent_base_1.Agent {
             if (this.timeout) {
                 socket.setTimeout(this.timeout);
                 socket.on('timeout', () => {
-                    console.log("Proxy connection timeout!", proxy.href);
+                    socket.end();
                 });
             }
             const headers = Object.assign({}, proxy.headers);
@@ -119,7 +119,7 @@ class HttpsProxyAgent extends agent_base_1.Agent {
             for (const name of Object.keys(headers)) {
                 payload += `${name}: ${headers[name]}\r\n`;
             }
-            const proxyResponsePromise = parse_proxy_response_1.default(socket);
+            const proxyResponsePromise = parse_proxy_response_1.default(socket, req);
             socket.write(`${payload}\r\n`);
             const { statusCode, buffered } = yield proxyResponsePromise;
             if (statusCode === 200) {

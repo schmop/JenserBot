@@ -1,5 +1,6 @@
 import createDebug from 'debug';
 import { Readable } from 'stream';
+import {ClientRequest} from "agent-base";
 
 const debug = createDebug('https-proxy-agent:parse-proxy-response');
 
@@ -9,7 +10,8 @@ export interface ProxyResponse {
 }
 
 export default function parseProxyResponse(
-	socket: Readable
+	socket: Readable,
+	req: ClientRequest
 ): Promise<ProxyResponse> {
 	return new Promise((resolve, reject) => {
 		// we need to buffer any HTTP traffic that happens with the proxy before we get
@@ -26,6 +28,7 @@ export default function parseProxyResponse(
 		}
 
 		function cleanup() {
+			req.removeListener('error', onreqerror);
 			socket.removeListener('end', onend);
 			socket.removeListener('error', onerror);
 			socket.removeListener('close', onclose);
@@ -34,10 +37,12 @@ export default function parseProxyResponse(
 
 		function onclose(err?: Error) {
 			debug('onclose had error %o', err);
+			reject(err);
 		}
 
 		function onend() {
 			debug('onend');
+			reject(null);
 		}
 
 		function onerror(err: Error) {
@@ -76,6 +81,15 @@ export default function parseProxyResponse(
 		socket.on('error', onerror);
 		socket.on('close', onclose);
 		socket.on('end', onend);
+
+		// when request timeouted or occured other errors,
+		// we need to close the socket which is still connecting to the proxy
+		req.on('error', onreqerror);
+
+		function onreqerror(err: Error){
+			socket.destroy();
+			onerror(err);
+		}
 
 		read();
 	});
