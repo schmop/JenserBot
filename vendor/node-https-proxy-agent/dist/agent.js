@@ -84,83 +84,90 @@ class HttpsProxyAgent extends agent_base_1.Agent {
      */
     callback(req, opts) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { proxy, secureProxy } = this;
-            // Create a socket connection to the proxy server.
-            let socket;
-            if (secureProxy) {
-                debug('Creating `tls.Socket`: %o', proxy);
-                socket = tls_1.default.connect(proxy);
-            }
-            else {
-                debug('Creating `net.Socket`: %o', proxy);
-                socket = net_1.default.connect(proxy);
-            }
-            if (this.timeout) {
-                socket.setTimeout(this.timeout);
-                socket.on('timeout', () => {
-                    socket.end();
-                });
-            }
-            const headers = Object.assign({}, proxy.headers);
-            const hostname = `${opts.host}:${opts.port}`;
-            let payload = `CONNECT ${hostname} HTTP/1.1\r\n`;
-            // Inject the `Proxy-Authorization` header if necessary.
-            if (proxy.auth) {
-                headers['Proxy-Authorization'] = `Basic ${Buffer.from(proxy.auth).toString('base64')}`;
-            }
-            // The `Host` header should only include the port
-            // number when it is not the default port.
-            let { host, port, secureEndpoint } = opts;
-            if (!isDefaultPort(port, secureEndpoint)) {
-                host += `:${port}`;
-            }
-            headers.Host = host;
-            headers.Connection = 'close';
-            for (const name of Object.keys(headers)) {
-                payload += `${name}: ${headers[name]}\r\n`;
-            }
-            const proxyResponsePromise = parse_proxy_response_1.default(socket, req);
-            socket.write(`${payload}\r\n`);
-            const { statusCode, buffered } = yield proxyResponsePromise;
-            if (statusCode === 200) {
-                req.once('socket', resume);
-                if (opts.secureEndpoint) {
-                    const servername = opts.servername || opts.host;
-                    if (!servername) {
-                        throw new Error('Could not determine "servername"');
-                    }
-                    // The proxy is connecting to a TLS server, so upgrade
-                    // this socket connection to a TLS connection.
-                    debug('Upgrading socket connection to TLS');
-                    return tls_1.default.connect(Object.assign(Object.assign({}, omit(opts, 'host', 'hostname', 'path', 'port')), { socket,
-                        servername }));
+            try {
+                const { proxy, secureProxy } = this;
+                // Create a socket connection to the proxy server.
+                let socket;
+                if (secureProxy) {
+                    debug('Creating `tls.Socket`: %o', proxy);
+                    socket = tls_1.default.connect(proxy);
                 }
-                return socket;
+                else {
+                    debug('Creating `net.Socket`: %o', proxy);
+                    socket = net_1.default.connect(proxy);
+                }
+                if (this.timeout) {
+                    socket.setTimeout(this.timeout);
+                    socket.on('timeout', () => {
+                        socket.end();
+                    });
+                }
+                const headers = Object.assign({}, proxy.headers);
+                const hostname = `${opts.host}:${opts.port}`;
+                let payload = `CONNECT ${hostname} HTTP/1.1\r\n`;
+                // Inject the `Proxy-Authorization` header if necessary.
+                if (proxy.auth) {
+                    headers['Proxy-Authorization'] = `Basic ${Buffer.from(proxy.auth).toString('base64')}`;
+                }
+                // The `Host` header should only include the port
+                // number when it is not the default port.
+                let { host, port, secureEndpoint } = opts;
+                if (!isDefaultPort(port, secureEndpoint)) {
+                    host += `:${port}`;
+                }
+                headers.Host = host;
+                headers.Connection = 'close';
+                for (const name of Object.keys(headers)) {
+                    payload += `${name}: ${headers[name]}\r\n`;
+                }
+                const proxyResponsePromise = parse_proxy_response_1.default(socket, req);
+                socket.write(`${payload}\r\n`);
+                const { statusCode, buffered } = yield proxyResponsePromise;
+                if (statusCode === 200) {
+                    req.once('socket', resume);
+                    if (opts.secureEndpoint) {
+                        const servername = opts.servername || opts.host;
+                        if (!servername) {
+                            throw new Error('Could not determine "servername"');
+                        }
+                        // The proxy is connecting to a TLS server, so upgrade
+                        // this socket connection to a TLS connection.
+                        debug('Upgrading socket connection to TLS');
+                        return tls_1.default.connect(Object.assign(Object.assign({}, omit(opts, 'host', 'hostname', 'path', 'port')), { socket,
+                            servername }));
+                    }
+                    return socket;
+                }
+                // Some other status code that's not 200... need to re-play the HTTP
+                // header "data" events onto the socket once the HTTP machinery is
+                // attached so that the node core `http` can parse and handle the
+                // error status code.
+                // Close the original socket, and a new "fake" socket is returned
+                // instead, so that the proxy doesn't get the HTTP request
+                // written to it (which may contain `Authorization` headers or other
+                // sensitive data).
+                //
+                // See: https://hackerone.com/reports/541502
+                socket.destroy();
+                const fakeSocket = new net_1.default.Socket();
+                fakeSocket.readable = true;
+                // Need to wait for the "socket" event to re-play the "data" events.
+                req.once('socket', (s) => {
+                    debug('replaying proxy buffer for failed request');
+                    assert_1.default(s.listenerCount('data') > 0);
+                    // Replay the "buffered" Buffer onto the fake `socket`, since at
+                    // this point the HTTP module machinery has been hooked up for
+                    // the user.
+                    s.push(buffered);
+                    s.push(null);
+                });
+                return fakeSocket;
             }
-            // Some other status code that's not 200... need to re-play the HTTP
-            // header "data" events onto the socket once the HTTP machinery is
-            // attached so that the node core `http` can parse and handle the
-            // error status code.
-            // Close the original socket, and a new "fake" socket is returned
-            // instead, so that the proxy doesn't get the HTTP request
-            // written to it (which may contain `Authorization` headers or other
-            // sensitive data).
-            //
-            // See: https://hackerone.com/reports/541502
-            socket.destroy();
-            const fakeSocket = new net_1.default.Socket();
-            fakeSocket.readable = true;
-            // Need to wait for the "socket" event to re-play the "data" events.
-            req.once('socket', (s) => {
-                debug('replaying proxy buffer for failed request');
-                assert_1.default(s.listenerCount('data') > 0);
-                // Replay the "buffered" Buffer onto the fake `socket`, since at
-                // this point the HTTP module machinery has been hooked up for
-                // the user.
-                s.push(buffered);
-                s.push(null);
-            });
-            return fakeSocket;
+            catch (e) {
+                console.error("FAIL IN CALLBACK", e);
+                console.trace();
+                throw e;
+            }
         });
     }
 }
