@@ -26,42 +26,46 @@ module.exports = class ArztpraxisGifhorn {
             uniqueident: '606d8c512d1ce'
         };
         const bodyAsString = Object.entries(body).map(([key, val]) => `${key}=${val}`).join('&');
-        const response = await fetch(url, {
-            method: 'POST',
-            body: bodyAsString,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-            }
-        });
-        if (response.ok === false) {
-            this.logger.error("Responsecode nicht ok!", response);
-            try {
-                const data = await response.text();
-                this.logger.error("Kaputte Daten: ", data);
-            } catch (e) {
-                this.logger.error("Leere Antwort erhalten!");
-            }
-        }
         try {
-            const text = await response.text();
-            let data = [];
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                if (text.includes('Captcha')) {
-                    this.logger.warning('We got fucked by a captcha!');
-                } else {
-                    this.logger.error('Unknown JSON error: ', text);
+            const response = await fetch(url, {
+                method: 'POST',
+                body: bodyAsString,
+                headers: {
+                    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                 }
+            });
+            if (response.ok === false) {
+                this.logger.error("Responsecode nicht ok!", response);
+                try {
+                    const data = await response.text();
+                    this.logger.error("Kaputte Daten: ", data);
+                } catch (e) {
+                    this.logger.error("Leere Antwort erhalten!");
+                }
+            }
+            try {
+                const text = await response.text();
+                let data = [];
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (text.includes('Captcha')) {
+                        this.logger.warning('We got fucked by a captcha!');
+                    } else {
+                        this.logger.error('Unknown JSON error: ', text);
+                    }
+
+                    return [];
+                }
+
+                return data.terminsuchen.filter(termin => !termin.name.startsWith('2. Impfung')).length > 0;
+            } catch (e) {
+                this.logger.error('Unknown error occured', e);
 
                 return [];
             }
-
-            return data.terminsuchen.filter(termin => !termin.name.startsWith('2. Impfung')).length > 0;
         } catch (e) {
-            this.logger.error('Unknown error occured', e);
-
-            return [];
+            this.logger.error(`Could not fetch from ${url}`, e);
         }
     }
 };
