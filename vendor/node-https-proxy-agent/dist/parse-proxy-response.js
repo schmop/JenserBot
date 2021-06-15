@@ -66,8 +66,6 @@ function parseProxyResponse(socket, req) {
         // we need to close the socket which is still connecting to the proxy
         req.on('error', onreqerror);
         function onreqerror(err) {
-            console.error(err);
-            console.trace();
             socket.destroy();
             onerror(err);
         }
