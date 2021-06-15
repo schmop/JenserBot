@@ -33,7 +33,7 @@ function parseProxyResponse(socket, req) {
         }
         function onend() {
             debug('onend');
-            reject(null);
+            reject(new Error('Socket was closed by other party!'));
         }
         function onerror(err) {
             cleanup();
