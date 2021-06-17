@@ -1,3 +1,4 @@
+const Utils = require('./utils');
 
 module.exports = class Jenser {
     constructor(logger, client, plz = '38106', birthDate = '843948000000') {
@@ -50,7 +51,12 @@ module.exports = class Jenser {
         if (response.ok !== true) {
             this.logger.warning("Fehlercode erhalten!", response.statusCode, response.statusText);
             try {
-                const data = await response.text();
+                // sometimes .text() won't stop
+                const data = await Utils.timeoutPromise(
+                    response.text(),
+                    5000,
+                    '<Fetching text from response timed out>'
+                );
                 this.logger.warning("Kaputte Daten: ", data);
             } catch (e) {
                 this.logger.warning("Leere Antwort erhalten!");

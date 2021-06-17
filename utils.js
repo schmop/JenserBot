@@ -25,4 +25,13 @@ module.exports = class Utils {
             }
         };
     }
+
+    static async timeoutPromise(promise, timeout = 10000, timeoutReturn = "timed out") {
+        return await Promise.race([
+            promise,
+            new Promise((resolve, reject) => {
+                setTimeout(resolve, timeout, timeoutReturn);
+            })
+        ]);
+    }
 };
